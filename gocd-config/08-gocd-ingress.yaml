@@ -1,0 +1,12 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: gocd-server-ing
+  labels:
+    app: gocd
+    component: server
+  annotations:
+spec:
+  backend:
+    serviceName: gocd-server
+    servicePort: 8153

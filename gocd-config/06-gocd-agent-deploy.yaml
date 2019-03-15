@@ -1,0 +1,34 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: gocd-agent-deploy
+  labels:
+    app: gocd
+    component: agent
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: gocd
+      component: agent
+  template:
+    metadata:
+      labels:
+        app: gocd
+        component: agent
+    spec:
+      serviceAccountName: default
+      containers:
+        - name: gocd-agent
+          image: "gocd/gocd-agent-alpine-3.6:v19.2.0"
+          imagePullPolicy: IfNotPresent
+          resources:
+            {}
+
+          env:
+            - name: GO_SERVER_URL
+              value: "https://gocd-server:8154/go"
+          securityContext:
+            privileged: false
+      restartPolicy: Always
+            

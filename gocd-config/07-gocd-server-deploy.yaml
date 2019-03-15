@@ -1,0 +1,81 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: gocd-server-deploy
+  labels:
+    app: gocd
+    component: server
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: gocd
+      component: server
+  template:
+    metadata:
+      labels:
+        app: gocd
+        component: server
+    spec:
+      serviceAccountName: gocd-sa
+      volumes:
+        - name: config-vol
+          configMap:
+            name: gocd-cm
+        - name: goserver-vol
+          persistentVolumeClaim:
+            claimName: gocd-server-pvc
+      containers:
+        - name: gocd-server
+          image: "gocd/gocd-server:v19.2.0"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GOCD_PLUGIN_INSTALL_kubernetes-elastic-agents
+              value: https://github.com/gocd/kubernetes-elastic-agents/releases/download/2.1.0-123/kubernetes-elastic-agent-2.1.0-123.jar
+            - name: GOCD_PLUGIN_INSTALL_docker-registry-artifact-plugin
+              value: https://github.com/gocd/docker-registry-artifact-plugin/releases/download/1.0.0-25/docker-registry-artifact-plugin-1.0.0-25.jar
+
+          ports:
+            - containerPort: 8153
+            - containerPort: 8154
+          livenessProbe:
+            httpGet:
+              path: /go/api/v1/health
+              port: 8153
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /go/api/v1/health
+              port: 8153
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            failureThreshold: 10
+          volumeMounts:
+            - name: config-vol
+              mountPath: /preconfigure_server.sh
+              subPath: preconfigure_server.sh
+            - name: goserver-vol
+              mountPath: /godata
+              subPath: godata
+            - name: goserver-vol
+              mountPath: /home/go
+              subPath: homego
+            - name: goserver-vol
+              mountPath: /docker-entrypoint.d
+              subPath: scripts
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/bash
+                  - /preconfigure_server.sh
+
+          resources:
+            {}
+
+      restartPolicy: Always
+              
